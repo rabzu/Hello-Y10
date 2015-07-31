@@ -1,21 +1,21 @@
+import java.io.IOException
+
 import akka.actor.ActorSystem
-import akka.event.{LoggingAdapter, Logging}
+import akka.event.{Logging, LoggingAdapter}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
-import akka.http.scaladsl.marshalling.ToResponseMarshallable
-import akka.http.scaladsl.model.{HttpResponse, HttpRequest}
 import akka.http.scaladsl.model.StatusCodes._
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import akka.stream.{ActorFlowMaterializer, FlowMaterializer}
 import akka.stream.scaladsl.{Flow, Sink, Source}
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigFactory
-import java.io.IOException
+import akka.stream.{ActorFlowMaterializer, FlowMaterializer}
+import com.typesafe.config.{Config, ConfigFactory}
+import spray.json.DefaultJsonProtocol
+
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.math._
-import spray.json.DefaultJsonProtocol
 
 case class IpInfo(ip: String, country: Option[String], city: Option[String], latitude: Option[Double], longitude: Option[Double])
 
@@ -77,31 +77,38 @@ trait Service extends Protocols {
     }
   }
 
-  val routes = {
-    logRequestResult("akka-http-microservice") {
-      pathPrefix("ip") {
-        (get & path(Segment)) { ip =>
-          complete {
-            fetchIpInfo(ip).map[ToResponseMarshallable] {
-              case Right(ipInfo) => ipInfo
-              case Left(errorMessage) => BadRequest -> errorMessage
-            }
-          }
-        } ~
-        (post & entity(as[IpPairSummaryRequest])) { ipPairSummaryRequest =>
-          complete {
-            val ip1InfoFuture = fetchIpInfo(ipPairSummaryRequest.ip1)
-            val ip2InfoFuture = fetchIpInfo(ipPairSummaryRequest.ip2)
-            ip1InfoFuture.zip(ip2InfoFuture).map[ToResponseMarshallable] {
-              case (Right(info1), Right(info2)) => IpPairSummary(info1, info2)
-              case (Left(errorMessage), _) => BadRequest -> errorMessage
-              case (_, Left(errorMessage)) => BadRequest -> errorMessage
-            }
-          }
-        }
+  val routes = extractRequest { request =>
+      println("HELLO")
+      complete(s"Request method is ${request.method.name} & content ${request.entity}")
       }
-    }
-  }
+
+
+//  val routes = {
+//    logRequestResult("akka-http-microservice") {
+//
+//      pathPrefix("ip") {
+//        (get & path(Segment)) { ip =>
+//          complete {
+//            fetchIpInfo(ip).map[ToResponseMarshallable] {
+//              case Right(ipInfo) => ipInfo
+//              case Left(errorMessage) => BadRequest -> errorMessage
+//            }
+//          }
+//        } ~
+//        (post & entity(as[IpPairSummaryRequest])) { ipPairSummaryRequest =>
+//          complete {
+//            val ip1InfoFuture = fetchIpInfo(ipPairSummaryRequest.ip1)
+//            val ip2InfoFuture = fetchIpInfo(ipPairSummaryRequest.ip2)
+//            ip1InfoFuture.zip(ip2InfoFuture).map[ToResponseMarshallable] {
+//              case (Right(info1), Right(info2)) => IpPairSummary(info1, info2)
+//              case (Left(errorMessage), _) => BadRequest -> errorMessage
+//              case (_, Left(errorMessage)) => BadRequest -> errorMessage
+//            }
+//          }
+//        }
+//      }
+//    }
+//  }
 }
 
 object AkkaHttpMicroservice extends App with Service {
