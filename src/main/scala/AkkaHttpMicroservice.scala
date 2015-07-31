@@ -78,7 +78,7 @@ trait Service extends Protocols {
   }
 
   val routes = extractRequest { request =>
-      println(s"Request method is ${request.method.name} & content ${request.entity}")
+      println(s"REQUEST IS:  ${request}")
       complete(s"Request method is ${request.method.name} & content ${request.entity}")
       }
 
